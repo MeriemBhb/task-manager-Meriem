@@ -1,9 +1,27 @@
-FROM python:3.12
+    FROM python:3.12-slim AS quality
 
-WORKDIR /app
-COPY . /app/
+    WORKDIR /app
 
-RUN pip install -r requirements.txt
 
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    COPY requirements.txt .
+    RUN pip install --no-cache-dir -r requirements.txt
+
+    RUN pip install --no-cache-dir ruff black
+
+    COPY app ./app
+
+    RUN ruff check app
+    RUN black --check app
+
+    # Image docker propre apres les tests de qualités
+    FROM python:3.12-slim
+
+    WORKDIR /app
+
+    COPY requirements.txt .
+    RUN pip install --no-cache-dir -r requirements.txt
+
+    COPY app ./app
+
+    EXPOSE 8000
+    CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
